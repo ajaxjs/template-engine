@@ -1,0 +1,39 @@
+{
+    "store_name": "TechMart Online",
+    "version": "1.0",
+    "separator": "---",
+    "sections": [
+        {
+            "name": "Electronics",
+            "categories": [
+                {
+                    "name": "Phones",
+                    "products": [
+                        { "name": "iPhone 16", "price": "999", "stock": 50 },
+                        { "name": "Pixel 9", "price": "799", "stock": 30 }
+                    ]
+                },
+                {
+                    "name": "Laptops",
+                    "products": [
+                        { "name": "MacBook Pro", "price": "1999", "stock": 20 },
+                        { "name": "ThinkPad X1", "price": "1299", "stock": 15 },
+                        { "name": "Dell XPS", "price": "1099", "stock": 25 }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Accessories",
+            "categories": [
+                {
+                    "name": "Cables",
+                    "products": [
+                        { "name": "USB-C Cable", "price": "12", "stock": 200 },
+                        { "name": "HDMI Cable", "price": "15", "stock": 150 }
+                    ]
+                }
+            ]
+        }
+    ]
+}
