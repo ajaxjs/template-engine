@@ -108,9 +108,19 @@ class TemplateParser
                     $node = (object)[
                         'type'     => 'for',
                         'itemVar'  => $m[1],
-                        'listPath' => self::parsePath($m[2]),
+                        'listPath' => null,
+                        'count'    => null,
                         'body'     => [],
                     ];
+
+                    if (ctype_digit($m[2])) {
+                        // Numeric range: {% for i in 5 %}
+                        $node->count = (int)$m[2];
+                    } else {
+                        // Array iteration: {% for item in list %}
+                        $node->listPath = self::parsePath($m[2]);
+                    }
+
                     $this->pos++; // consume {% for %}
                     $node->body = $this->parseNodes(); // recurse; stops at {% endfor %}
                     $nodes[] = $node;
@@ -183,13 +193,18 @@ class TemplateRenderer
      */
     private function renderFor(object $node): string
     {
-        $list = $this->resolve($node->listPath);
-        if (!is_array($list)) {
-            return '';
+        // Build the iteration list: numeric range or array variable
+        if ($node->count !== null) {
+            $items = range(1, max(0, $node->count));
+        } else {
+            $list = $this->resolve($node->listPath);
+            if (!is_array($list)) {
+                return '';
+            }
+            $items = array_values($list);
         }
 
         $output = '';
-        $items = array_values($list); // re-index to 0-based
         $count = count($items);
 
         foreach ($items as $i => $item) {

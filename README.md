@@ -6,6 +6,7 @@
 
 - 变量输出与点号路径访问（`{{ user.name }}`）
 - 嵌套 `for` 循环（`{% for item in list %}`）
+- 数值范围循环（`{% for i in 5 %}`）
 - 循环元数据（`loop.index` / `loop.first` / `loop.last`）
 - 注释（`{# ... #}`）
 - 纯文本快速通道 —— 无模板语法时跳过解析，直接返回
@@ -20,7 +21,8 @@
 | `{{ loop.index }}` | 当前迭代序号（从 1 开始） | `{{ loop.index }}` |
 | `{{ loop.first }}` | 是否首次迭代 | `{{ loop.first }}` |
 | `{{ loop.last }}` | 是否末次迭代 | `{{ loop.last }}` |
-| `{% for item in list %} ... {% endfor %}` | 循环（可无限嵌套） | 见下方示例 |
+| `{% for item in list %} ... {% endfor %}` | 数组循环（可无限嵌套） | 见下方示例 |
+| `{% for i in 5 %} ... {% endfor %}` | 数值范围循环，`i` 从 1 到 5 | 见下方示例 |
 | `{# comment #}` | 注释，不输出 | `{# TODO #}` |
 
 ## 快速开始
@@ -166,11 +168,6 @@ console.log(TemplateEngine.compile(template, data));
 
 ### 循环元数据
 
-```php
-<?php
-$template = '{% for item in items %}{{ loop.index }}/{{ item }}{% if loop.last %} (last){% endif %}' . "\n" . '{% endfor %}';
-```
-
 `loop` 对象在每次迭代中可用：
 
 | 属性 | 类型 | 说明 |
@@ -180,6 +177,56 @@ $template = '{% for item in items %}{{ loop.index }}/{{ item }}{% if loop.last %
 | `loop.last` | `bool` | 末次迭代时为 `true`（渲染为 `1`） |
 
 嵌套循环中，`loop` 始终指向**当前层**的循环元数据，不会被外层覆盖。
+
+### 数值范围循环
+
+`in` 后跟纯数字时，循环 N 次，循环变量从 **1** 开始递增，与 `loop.index` 一致：
+
+```php
+<?php
+// 基础数值循环
+echo TemplateEngine::compile('{% for i in 5 %}{{ i }} {% endfor %}', []);
+// => "1 2 3 4 5 "
+
+// 生成 HTML 列表
+echo TemplateEngine::compile(
+    '{% for i in 3 %}<li>Item {{ i }}</li>' . "\n" . '{% endfor %}',
+    []
+);
+```
+
+```js
+// 基础数值循环
+console.log(TemplateEngine.compile('{% for i in 5 %}{{ i }} {% endfor %}', {}));
+// => "1 2 3 4 5 "
+
+// 生成 HTML 列表
+console.log(TemplateEngine.compile(
+    '{% for i in 3 %}<li>Item {{ i }}</li>\n{% endfor %}',
+    {}
+));
+```
+
+输出：
+
+```html
+<li>Item 1</li>
+<li>Item 2</li>
+<li>Item 3</li>
+```
+
+数值循环可与数组循环自由嵌套：
+
+```php
+<?php
+$template = '{% for g in groups %}[{{ g.name }}]{% for i in 2 %} {{ i }}{% endfor %} {% endfor %}';
+$data    = ['groups' => [['name' => 'A'], ['name' => 'B']]];
+
+echo TemplateEngine::compile($template, $data);
+// => "[A] 1 2 [B] 1 2 "
+```
+
+`in 0` 时循环体不执行，输出空字符串。
 
 ### 注释
 
@@ -230,25 +277,28 @@ TemplateEngine.hasSyntax('{# comment #}');    // => true
 ## 运行测试
 
 ```bash
-# JavaScript
-node test.js
+# 模板引擎测试
+node test.js          # JavaScript
+php test.php          # PHP
 
-# PHP
-php test.php
+# HTML 压缩测试
+php test_minify.php   # 20 项断言
 ```
 
-两端读取同一份 `test.tpl` + `test_data.json`，输出完全一致。
+模板引擎两端读取同一份 `test.tpl` + `test_data.json`，输出完全一致。
 
 ## 项目结构
 
 ```
 template-parse/
-├── TemplateEngine.php   # PHP 实现
-├── TemplateEngine.js    # JavaScript 实现
+├── TemplateEngine.php   # PHP 模板引擎
+├── TemplateEngine.js    # JavaScript 模板引擎
+├── HtmlMinify.php       # HTML/CSS 压缩器
 ├── test.tpl             # 共享测试模板
 ├── test_data.json       # 共享测试数据
-├── test.php             # PHP 测试脚本
-├── test.js              # JavaScript 测试脚本
+├── test.php             # PHP 模板测试脚本
+├── test.js              # JavaScript 模板测试脚本
+├── test_minify.php      # HTML 压缩测试脚本
 └── README.md            # 本文档
 ```
 
@@ -277,5 +327,6 @@ Template String
 |------|------|
 | 变量不存在 | 输出空字符串 |
 | 循环目标非数组 | 输出空字符串 |
+| 数值循环 `in 0` | 循环体不执行，输出空字符串 |
 | 未知 `{% block %}` | 静默跳过 |
 | 未 `parse()` 直接 `render()` | 抛出运行时异常 |

@@ -100,9 +100,19 @@ class TemplateParser {
                     const node = {
                         type: 'for',
                         itemVar: forMatch[1],
-                        listPath: TemplateParser.parsePath(forMatch[2]),
+                        listPath: null,
+                        count: null,
                         body: [],
                     };
+
+                    if (/^\d+$/.test(forMatch[2])) {
+                        // Numeric range: {% for i in 5 %}
+                        node.count = parseInt(forMatch[2], 10);
+                    } else {
+                        // Array iteration: {% for item in list %}
+                        node.listPath = TemplateParser.parsePath(forMatch[2]);
+                    }
+
                     this.pos++; // consume {% for %}
                     node.body = this._parseNodes(); // recurse; stops at {% endfor %}
                     nodes.push(node);
@@ -167,13 +177,23 @@ class TemplateRenderer {
      * Pushes a new scope per iteration with the item variable and loop metadata.
      */
     _renderFor(node) {
-        const list = this._resolve(node.listPath);
-        if (!Array.isArray(list)) {
-            return '';
+        // Build the iteration list: numeric range or array variable
+        let items;
+        if (node.count !== null) {
+            items = [];
+            for (let n = 1; n <= Math.max(0, node.count); n++) {
+                items.push(n);
+            }
+        } else {
+            const list = this._resolve(node.listPath);
+            if (!Array.isArray(list)) {
+                return '';
+            }
+            items = list;
         }
 
         let output = '';
-        const count = list.length;
+        const count = items.length;
 
         for (let i = 0; i < count; i++) {
             // New scope: inherit parent's loop metadata, then overlay current loop's
@@ -184,7 +204,7 @@ class TemplateRenderer {
                 last: i === count - 1,
             };
             const scope = Object.assign({}, parentScope, {
-                [node.itemVar]: list[i],
+                [node.itemVar]: items[i],
                 loop: loopMeta,
             });
 
