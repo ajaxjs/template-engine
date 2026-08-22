@@ -105,8 +105,8 @@ assertEqual(
 );
 
 assertEqual(
-    'inline text space preserved',
-    '<span>Hello</span> <span>World</span>',
+    'adjacent inline tags compacted',
+    '<span>Hello</span><span>World</span>',
     HtmlMinify::minify('<span>Hello</span> <span>World</span>')
 );
 

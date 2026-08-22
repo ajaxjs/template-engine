@@ -53,7 +53,9 @@ class HtmlMinify
         $html = preg_replace_callback(
             '/(style\s*=\s*")([^"]*?)(")/i',
             function ($m) {
-                return $m[1] . self::minifyCss($m[2]) . $m[3];
+                $css = self::minifyCss($m[2]);
+                $css = rtrim($css, ';'); // strip trailing semicolons for inline styles
+                return $m[1] . $css . $m[3];
             },
             $html
         );
@@ -74,6 +76,9 @@ class HtmlMinify
 
         // Collapse runs of whitespace (including newlines) into a single space
         $html = preg_replace('/\s+/s', ' ', $html);
+
+        // Trim leading / trailing whitespace of this fragment
+        $html = trim($html);
 
         // Remove space between adjacent tags: ">  <" → "><"
         $html = preg_replace('/>\s+</', '><', $html);
@@ -153,7 +158,7 @@ class HtmlMinify
      */
     private static function protectBlocks(string $html): array
     {
-        $inner = '<(script|style|pre|textarea|code)\b[^>]*>[\s\S]*?<\/\1>';
+        $inner = '<(?:script|style|pre|textarea|code)\b[^>]*>[\s\S]*?<\/(?:script|style|pre|textarea|code)>';
         return preg_split(
             '/(' . $inner . ')/is',
             $html,
