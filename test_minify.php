@@ -64,6 +64,48 @@ assertEqual(
     HtmlMinify::minifyCss('a { color: red; }')
 );
 
+assertEqual(
+    'calc() kept verbatim',
+    'a{width:calc(100% - 10px)}',
+    HtmlMinify::minifyCss('a { width: calc(100% - 10px); }')
+);
+
+assertEqual(
+    'calc() with nested vars kept verbatim',
+    '.g{grid-template-columns:calc((var(--n) - 1) * var(--gap) + var(--iw))}',
+    HtmlMinify::minifyCss('.g { grid-template-columns: calc((var(--n) - 1) * var(--gap) + var(--iw)); }')
+);
+
+assertEqual(
+    'multiple calc() expressions',
+    'a{margin:calc(1px + 2px) calc(50% - 1rem)}',
+    HtmlMinify::minifyCss('a { margin: calc(1px + 2px) calc(50% - 1rem); }')
+);
+
+assertEqual(
+    'nested calc() kept verbatim',
+    'a{width:calc(calc(1rem + 2px) * 2)}',
+    HtmlMinify::minifyCss('a { width: calc(calc(1rem + 2px) * 2); }')
+);
+
+assertEqual(
+    'calc() inside other functions',
+    'a{grid-template-columns:repeat(2, minmax(calc(50% - 10px), 1fr))}',
+    HtmlMinify::minifyCss('a { grid-template-columns: repeat(2, minmax(calc(50% - 10px), 1fr)); }')
+);
+
+assertEqual(
+    'my-calc( is not protected but still valid',
+    'a{background:url(my-calc(1px))}',
+    HtmlMinify::minifyCss('a { background: url(my-calc(1px)); }')
+);
+
+assertEqual(
+    'uppercase CALC() kept verbatim',
+    'a{width:CALC(100% - 10px)}',
+    HtmlMinify::minifyCss('a { width: CALC(100% - 10px); }')
+);
+
 // ===========================================================================
 echo "\n=== HTML minification ===\n";
 // ===========================================================================
@@ -108,6 +150,18 @@ assertEqual(
     'adjacent inline tags compacted',
     '<span>Hello</span><span>World</span>',
     HtmlMinify::minify('<span>Hello</span> <span>World</span>')
+);
+
+assertEqual(
+    'calc() in inline style kept verbatim',
+    '<div style="width:calc(50% - 10px)">x</div>',
+    HtmlMinify::minify('<div style="width: calc(50% - 10px)">x</div>')
+);
+
+assertEqual(
+    'calc() in <style> block kept verbatim',
+    '<style>.g{width:calc((var(--n) - 1) * var(--gap))}</style>',
+    HtmlMinify::minify("<style>\n  .g {\n    width: calc((var(--n) - 1) * var(--gap));\n  }\n</style>")
 );
 
 // ===========================================================================

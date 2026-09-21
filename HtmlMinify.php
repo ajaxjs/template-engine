@@ -112,6 +112,12 @@ class HtmlMinify
         // Strip CSS comments
         $css = preg_replace('/\/\*[\s\S]*?\*\//s', '', $css);
 
+        // Protect calc() expressions: the + and - operators inside calc()
+        // require whitespace on both sides, so their content must be kept
+        // verbatim and restored after the compression rules below ran.
+        $calcMap = [];
+        $css = self::protectCalcExpressions($css, $calcMap);
+
         // Collapse whitespace
         $css = preg_replace('/\s+/s', ' ', $css);
         $css = trim($css);
@@ -145,7 +151,59 @@ class HtmlMinify
             $css
         );
 
-        return $css;
+        // Restore the protected calc() expressions
+        return strtr($css, $calcMap);
+    }
+
+    /**
+     * Replace every calc(...) expression with a placeholder.
+     *
+     * In calc() the + and - operators need whitespace on both sides
+     * ("calc(100% - 10px)"); without it ("calc(100%-10px)") the whole
+     * declaration is invalid. Nested parentheses are matched by depth,
+     * e.g. "calc((var(--n) - 1) * var(--gap))".
+     */
+    private static function protectCalcExpressions(string $css, array &$placeholders): string
+    {
+        $result = '';
+        $consumed = 0; // start of the tail that has not been copied yet
+        $search = 0;   // position to resume the scan from
+        $len = strlen($css);
+
+        while (false !== ($pos = stripos($css, 'calc(', $search))) {
+            // Skip occurrences that are part of a longer name (e.g. "my-calc(")
+            $prev = $pos > 0 ? $css[$pos - 1] : '';
+            if ($prev !== '' && (ctype_alnum($prev) || $prev === '-' || $prev === '_' || $prev === '\\')) {
+                $search = $pos + 5;
+                continue;
+            }
+
+            // Find the closing parenthesis matching the one after "calc"
+            $depth = 0;
+            $end = false;
+            for ($i = $pos + 4; $i < $len; $i++) {
+                if ($css[$i] === '(') {
+                    $depth++;
+                } elseif ($css[$i] === ')') {
+                    if (--$depth === 0) {
+                        $end = $i + 1;
+                        break;
+                    }
+                }
+            }
+            if ($end === false) {
+                // Unbalanced parentheses: keep the remainder untouched
+                break;
+            }
+
+            $placeholder = "\x01CALC_" . count($placeholders) . "_\x02";
+            $placeholders[$placeholder] = substr($css, $pos, $end - $pos);
+            $result .= substr($css, $consumed, $pos - $consumed) . $placeholder;
+            $consumed = $end;
+            $search = $end;
+        }
+
+        return $result . substr($css, $consumed);
     }
 
     // =========================================================================
